@@ -4,8 +4,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class PrimeFinderThread extends Thread{
-
-	
 	int a,b;
 	
 	private List<Integer> primes;
@@ -19,10 +17,20 @@ public class PrimeFinderThread extends Thread{
 
         @Override
 	public void run(){
-            for (int i= a;i < b;i++){						
+            for (int i= a;i < b;i++){
+                Control.countDown();
+                synchronized(this) {
+                    while (Control.isPaused()) {
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
+                }
                 if (isPrime(i)){
                     primes.add(i);
-                    System.out.println(i);
                 }
             }
 	}
@@ -43,5 +51,5 @@ public class PrimeFinderThread extends Thread{
 	public List<Integer> getPrimes() {
 		return primes;
 	}
-	
+
 }
