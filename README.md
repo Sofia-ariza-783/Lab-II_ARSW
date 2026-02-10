@@ -13,15 +13,12 @@ Nombres:
    * Se pausen todos los hilos trabajadores.
    * Se muestre cuántos números primos se han encontrado.
    * El programa esperé ENTER para reanudar.
-   
-La sincronización debe usar synchronized, wait(), notify() / notifyAll() sobre el mismo monitor (sin busy-waiting).
-Entrega en el reporte de laboratorio las observaciones y/o comentarios explicando tu diseño de sincronización (qué lock, qué condición, cómo evitas lost wakeups).
 
-**Ejecución con Maven:**
+Para controlar la ejecución del hilo y lograr que se pause cada cierto número de milisegundos establecidos para corroborar los resultados, se implementó un timer que corre en su propio hilo y determina cuándo detener el flujo. Este reloj es la herramienta principal del controller, pues después de inicializar todos los hilos, inicia la cuenta regresiva. Cuando el tiempo se agota, el timer notifica al controller y pausa los hilos, utilizando una variable bandera compartida que sincroniza a todos los hilos. Estos permanecen en espera hasta que se recibe la señal de reanudación mediante la tecla Enter del usuario.
 
-```bash
-mvn compile exec:java -Dexec.mainClass="edu.eci.arsw.primefinder.Main"
-```
+Este ciclo se repite mientras aún queden números primos por buscar, lo cual se verifica a través de una cuenta regresiva Thread-safe que los hilos modifican concurrentemente después de revisar cada uno de los números.
+
+### Solucion
 
 # 🥈 Parte II
 ### 1) Análisis de concurrencia
