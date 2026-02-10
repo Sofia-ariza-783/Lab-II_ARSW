@@ -17,7 +17,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
-		    <mainClass>edu.eci.arsw.primefinder.Main</mainClass>
+                    <mainClass>edu.eci.arsw.snake.app.Main</mainClass>
                     <arguments>
                     </arguments>
                 </configuration>

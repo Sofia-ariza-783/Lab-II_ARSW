@@ -4,7 +4,6 @@
 
 Nombres:
 - Sofia Nicolle Ariza Goenaga
-
 ---
 
 # 🥇 Parte I
@@ -41,8 +40,8 @@ mvn compile exec:java -Dexec.mainClass="edu.eci.arsw.primefinder.Main"
 ### 3) Control de ejecución seguro (UI)
  *  Implementa la UI con Iniciar / Pausar / Reanudar (ya existe el botón Action y el reloj GameClock).
  *  Al Pausar, muestra de forma consistente (sin tearing):
- *  La serpiente viva más larga.
- *  La peor serpiente (la que primero murió).
+   *  La serpiente viva más larga.
+   *  La peor serpiente (la que primero murió).
  *  Considera que la suspensión no es instantánea; coordina para que el estado mostrado no quede “a medias”.
 
 ---
@@ -81,4 +80,48 @@ El código actualmente presenta varios errores potenciales:
 
 ## 2) Correcciones mínimas y regiones crítica
 
+Se centralizó la lógica del juego para que [GameClock.java](src/main/java/edu/eci/arsw/snake/core/engine/GameClock.java) controlara los ticks de todo el sistema. Para ello se utilizó una mezcla del scheduler que ya existía y el executor, encargado de administrar los diferentes hilos y ejecutar sus métodos run cada vez que el scheduler lo indicaba. Para evitar problemas al dibujar, al final de cada tick se emplea una barrera implícita y se actualiza la interfaz, evitando inconsistencias.
+
+Antes de corregir este error, el GameClock y la GUI controlaban los estados del juego (pausado, corriendo o detenido) sin informar a la lógica, la cual se ejecutaba de manera independiente e infinita. Esto generaba inconsistencias visuales al pausar y cambios bruscos al reanudar. Ahora esos problemas se solucionaron, pues el GameClock centraliza la ejecución de los ticks y las serpientes ya no corren infinitamente por su cuenta, sino que siguen el ritmo del scheduler que administra el juego, sin alterar su funcionamiento actual.
+
+Adicionalmente, se sincronizaron los métodos que accedían concurrentemente al body para protegerlo, junto con la función turn, que ocasionaba solapamientos entre entradas y podía producir movimientos no válidos que ignoraban las reglas establecidas en el juego.
+
+Para corregir el error de las copias constantes cada vez que la GUI realizaba un repaint, se modificaron los métodos de acceso a cada uno de los elementos del tablero (mice, obstáculos, turbo, etc.) para que no generaran una copia en cada solicitud, sino que compartieran una copia accesible por todos los hilos, la cual se actualiza después de cada interacción de una snake con el tablero. Esto se implementó mediante un record y una variable volatile que se actualiza en cada momento clave (cuando alguna snake interactúa con los elementos del tablero o cuando se inicializa el tablero).
+
 ---
+
+### 3) Control de ejecución seguro (UI)
+
+[Screen Recording 2026-02-09 212251.mp4](docs/Screen%20Recording%202026-02-09%20212251.mp4)
+
+Dado que todo se esta manejando con una barrera y la GUI no se actualiza hasta que todos los calculos se terminen de hacer y el tick es una funcion que se tiene que terminar de ejecutar completa, el flujo actual asegura que no queden estados a medias o retrasados.
+
+---
+
+### 4) Robustez bajo carga
+
+* 20 serpientes - velocidad normal
+[Screen Recording 2026-02-09 214442.mp4](docs/Screen%20Recording%202026-02-09%20214442.mp4)
+
+* 2 serpientes - velocidad x2 (30ms)
+[Screen Recording 2026-02-09 214528.mp4](docs/Screen%20Recording%202026-02-09%20214528.mp4)
+
+* 20 serpientes - velocidad x2 (30ms)
+[Screen Recording 2026-02-09 214958.mp4](docs/Screen%20Recording%202026-02-09%20214958.mp4)
+
+Incluso al ejecutar el juego durante varios minutos, este no presenta deadlocks ni problemas de acceso concurrente, ya que la mayoría de las sincronizaciones se redujeron y no se agregaron bloqueos directos. En su lugar, todos los hilos se ejecutan en paralelo, orquestados por el GameClock.
+
+El rendimiento general de la solución es bueno, con un consumo reducido de recursos: alrededor de 1.2 GB de memoria y aproximadamente 0.2 % de procesador.
+
+
+---
+
+### Ejecutar
+
+```bash
+
+mvn clean verify
+
+mvn -q -DskipTests compile exec:java -Dexec.mainClass="edu.eci.arsw.snake.app.Main" -Dsnakes=20
+
+```

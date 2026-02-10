@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class SnakeApp extends JFrame {
@@ -21,6 +22,7 @@ public final class SnakeApp extends JFrame {
   private final JButton actionButton;
   private final GameClock clock;
   private final java.util.List<Snake> snakes = new java.util.ArrayList<>();
+  private final java.util.List<SnakeRunner> snakeRunners = new java.util.ArrayList<>();
 
   public SnakeApp() {
     super("The Snake Race");
@@ -45,10 +47,15 @@ public final class SnakeApp extends JFrame {
     pack();
     setLocationRelativeTo(null);
 
-    this.clock = new GameClock(60, () -> SwingUtilities.invokeLater(gamePanel::repaint));
+    ExecutorService gameExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    this.clock = new GameClock(60, gameExecutor);
 
-    var exec = Executors.newVirtualThreadPerTaskExecutor();
-    snakes.forEach(s -> exec.submit(new SnakeRunner(s, board)));
+    for (Snake snake : snakes) {
+      SnakeRunner runner = new SnakeRunner(snake, board);
+      snakeRunners.add(runner);
+      clock.addGameLogicTask(runner);
+    }
+    clock.addUITask(() -> SwingUtilities.invokeLater(gamePanel::repaint));
 
     actionButton.addActionListener((ActionEvent e) -> togglePause());
 
@@ -132,6 +139,10 @@ public final class SnakeApp extends JFrame {
     if ("Action".equals(actionButton.getText())) {
       actionButton.setText("Resume");
       clock.pause();
+      int maxLength = snakes.stream().mapToInt(Snake::getMaxLength).max().orElse(0);
+      int minLength = snakes.stream().mapToInt(Snake::getMaxLength).min().orElse(0);
+      JOptionPane.showMessageDialog(this, "La serpiente mas larga es: "+maxLength+"\n La serpiente mas corta es: "+ minLength, "Reporte de resultados", JOptionPane.INFORMATION_MESSAGE);
+
     } else {
       actionButton.setText("Action");
       clock.resume();
